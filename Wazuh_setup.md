@@ -144,7 +144,7 @@ Run in an elevated PowerShell session on the DC:
 
 ```
 Invoke-WebRequest -Uri https://packages.wazuh.com/4.x/windows/wazuh-agent-4.9.2-1.msi -OutFile $env:tmp\wazuh-agent.msi
-msiexec.exe /i $env:tmp\wazuh-agent.msi /q WAZUH_MANAGER='<ubuntu-ip>' WAZUH_AGENT_GROUP='default' WAZUH_AGENT_NAME='<unique-agent-name>'
+msiexec.exe /i $env:tmp\wazuh-agent.msi /q WAZUH_MANAGER='<ubuntu-ip>' WAZUH_AGENT_GROUP='<Group_name>' WAZUH_AGENT_NAME='<unique-agent-name>'
 NET START WazuhSvc
 ```
 
