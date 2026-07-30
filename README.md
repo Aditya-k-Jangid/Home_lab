@@ -78,6 +78,9 @@ then view all the logs captured :
 
 To get more info about a perticular packet just click it and view the details: (like the source ip 192.168.29.245 and others info)
 
+
+3. now after getting the password of 'John Willium' : John2134! who has genericwrite over Orange lets abuse this ACL and capture the logs , 
+
 <img width="443" height="560" alt="Screenshot 2026-07-30 175402" src="https://github.com/user-attachments/assets/8aa2080f-9826-45f7-a075-b09594f2e737" />
 
 
