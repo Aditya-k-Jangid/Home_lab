@@ -1,0 +1,146 @@
+<!-- Local rules -->
+
+<!-- Modify it at your will. -->
+<!-- Copyright (C) 2015, Wazuh Inc. -->
+
+<!-- Example -->
+<group name="local,syslog,sshd,">
+
+  <!--
+  Dec 10 01:02:02 host sshd[1234]: Failed none for root from 1.1.1.1 port 1066 ssh2
+  -->
+  <rule id="100001" level="5">
+    <if_sid>5716</if_sid>
+    <srcip>1.1.1.1</srcip>
+    <description>sshd: authentication failed from IP 1.1.1.1.</description>
+    <group>authentication_failed,pci_dss_10.2.4,pci_dss_10.2.5,</group>
+  </rule>
+
+</group>
+
+
+<group name="local,syscheck,">
+  <rule id="100010" level="10" frequency="20" timeframe="20">
+    <if_matched_sid>60122</if_matched_sid>
+    <same_source_ip />
+    <description>Possible port scan detected: multiple connection attempts from same source IP</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+  </rule>
+</group>
+
+
+<group name="local,windows,firewall,">
+  <rule id="100020" level="3">
+    <if_group>windows</if_group>
+    <field name="win.system.eventID">^5156$</field>
+    <description>Windows Filtering Platform: connection permitted from $(win.eventdata.sourceAddress) to port $(win.eventdata.destPort)</description>
+    <group>gdpr_IV_35.7.d,</group>
+  </rule>
+
+<rule id="100021" level="12" frequency="20" timeframe="30">
+  <if_matched_sid>100020</if_matched_sid>
+  <same_field>win.eventdata.sourceAddress</same_field>
+  <description>Possible port scan detected: multiple connection attempts from $(win.eventdata.sourceAddress) in a short time</description>
+  <mitre>
+    <id>T1046</id>
+  </mitre>
+  <group>recon,</group>
+</rule>
+
+</group>
+
+
+<group name="local,ad_lab,">
+
+<rule id="100030" level="8">
+  <if_sid>60103</if_sid>
+  <field name="win.system.eventID">^4624$</field>
+  <field name="win.eventdata.targetUserName" type="pcre2">ANONYMOUS LOGON</field>
+  <description>Anonymous/null session logon detected - possible enumeration</description>
+  <mitre><id>T1069</id></mitre>
+</rule>
+
+<!-- 3a. Base rule: failed logon -->
+  <rule id="100039" level="5">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4625$</field>
+    <description>Failed logon attempt</description>
+  </rule>
+
+  <!-- 3b. Brute force: multiple failed logons from same source -->
+  <rule id="100031" level="10" frequency="5" timeframe="60">
+    <if_matched_sid>100039</if_matched_sid>
+    <same_source_ip />
+    <description>Possible brute force attack: multiple failed logons from same source</description>
+    <mitre><id>T1110</id></mitre>
+  </rule>
+  <!-- 4. User added to privileged group (Administrators, Domain Admins, etc) -->
+  <rule id="100033" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4728$|^4732$|^4756$</field>
+    <description>User added to privileged group: $(win.eventdata.MemberName) added to $(win.eventdata.TargetUserName)</description>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+
+  <!-- 5. ACL/DACL modification on AD object (GenericWrite abuse) -->
+  <rule id="100034" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^5136$</field>
+    <field name="win.eventdata.AttributeLDAPDisplayName">^ntSecurityDescriptor$</field>
+    <description>AD object ACL modified: possible permission abuse on $(win.eventdata.ObjectDN)</description>
+    <mitre><id>T1222</id></mitre>
+  </rule>
+
+  <!-- 6. Certificate template modified (ESC1 setup) -->
+  <rule id="100035" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^5136$</field>
+    <field name="win.eventdata.ObjectDN" type="pcre2">Certificate Templates</field>
+    <description>Certificate template modified: possible ADCS (ESC1) misconfiguration</description>
+    <mitre><id>T1649</id></mitre>
+  </rule>
+
+  <!-- 7. Kerberoasting: TGS request with weak encryption -->
+  <rule id="100036" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4769$</field>
+    <field name="win.eventdata.TicketOptions" type="pcre2">0x40810000</field>
+    <field name="win.eventdata.TicketEncryptionType" type="pcre2">0x17</field>
+    <description>Possible Kerberoasting attack</description>
+    <mitre><id>T1558.003</id></mitre>
+  </rule>
+
+  <!-- 8. Golden ticket: blank LogonGuid -->
+  <rule id="100037" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4624$</field>
+    <field name="win.eventdata.LogonGuid" type="pcre2">{00000000-0000-0000-0000-000000000000}</field>
+    <field name="win.eventdata.LogonType">^3$</field>
+    <description>Possible Golden Ticket attack</description>
+    <mitre><id>T1558.001</id></mitre>
+  </rule>
+
+  <!-- 9. DCSync: replication rights abuse -->
+  <rule id="100038" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4662$</field>
+    <field name="win.eventdata.properties" type="pcre2">{1131f6aa-9c07-11d1-f79f-00c04fc2dcd2}|{19195a5b-6da0-11d0-afd3-00c04fd930c9}</field>
+    <description>Directory Service Access - possible DCSync attack</description>
+    <mitre><id>T1003.006</id></mitre>
+  </rule>
+
+</group>
+
+<group name="local,ad_lab,sysmon,">
+
+  <!-- LSASS memory access - classic Mimikatz/credential dumping indicator -->
+  <rule id="100040" level="14">
+    <if_sid>61612</if_sid>
+    <field name="win.eventdata.targetImage" type="pcre2">lsass\.exe</field>
+    <description>Possible credential dumping: process accessed LSASS memory ($(win.eventdata.sourceImage))</description>
+    <mitre><id>T1003.001</id></mitre>
+  </rule>
+
+</group>
