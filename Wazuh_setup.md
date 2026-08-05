@@ -319,22 +319,3 @@ ping wazha.xyz.com
 ```
 
 ---
-
-## 8. End-to-end test
-
-Trigger an event from the attacker box (e.g. re-run ESC1 enumeration):
-```bash
-certipy-ad find -u Orange -p 'secret2!' -dc-ip <dc-ip> -vulnerable -stdout
-```
-
-In the Wazuh dashboard, go to **Threat Hunting** (or **Security Events**), filter by `agent.name: DC01`, and check the last few minutes for related events. This confirms full pipeline: attack → Windows logs it → Wazuh agent forwards it → manager indexes it → visible in dashboard.
-
----
-
-## Known issues hit during setup
-
-- **`Invalid agent name (same as manager)`** — Ubuntu manager's hostname collided with the chosen agent name. Fix: pick a distinct agent name (e.g. `DC01`), edit `ossec.conf`, restart the service.
-- **`Test-NetConnection` false alarm** — double-check `SourceAddress` in the output isn't accidentally the same as the target IP (sign you're testing against the wrong host, e.g. the DC's own IP instead of Ubuntu's).
-- **`realm join` fails with `Message stream modified`** — encryption-type negotiation issue between `adcli`/LDAP and the DC (not fixable via `/etc/krb5.conf`, since `realmd` generates its own temp config). Fix: delete the partial computer account, then rejoin with `--membership-software=samba` to use the RPC-based join path instead.
-- **`kdestroy: command not found`** — Kerberos client tools weren't installed; `sudo apt install krb5-user` fixes it.
-- **`update-crypto-policies: command not found`** — that command is RHEL/Fedora-only; not applicable on Ubuntu/Debian.
