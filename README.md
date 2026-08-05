@@ -20,8 +20,8 @@
 
 ## Table of Contents
 
-1. [Lab Overview](#-lab-overview)
-2. [Setup](#-setup)
+1. [Lab Overview](#-Lab-Overview)
+2. [Setup](#-Setup)
 3. [Attack Chain](#-attack-chain)
    - [1. Reconnaissance](#1-reconnaissance)
    - [2. Anonymous SMB Access & Loot](#2-anonymous-smb-access--loot)
