@@ -16,13 +16,13 @@
 
 </div>
 
+
 ---
-
 ## Table of Contents
-
-1. [Lab Overview](#-Lab-Overview)
-2. [Setup](#-Setup)
-3. [Attack Chain](#-attack-chain)
+ 
+1. [Lab Overview](#lab-overview)
+2. [Setup](#setup)
+3. [Attack Chain](#attack-chain)
    - [1. Reconnaissance](#1-reconnaissance)
    - [2. Anonymous SMB Access & Loot](#2-anonymous-smb-access--loot)
    - [3. Cracking & Credential Spray](#3-cracking--credential-spray)
@@ -30,10 +30,10 @@
    - [5. Fake-SPN Kerberoast](#5-fake-spn-kerberoast)
    - [6. AD CS Abuse — ESC1](#6-ad-cs-abuse--esc1)
    - [7. Pass-the-Hash → Domain Admin](#7-pass-the-hash--domain-admin)
-4. [Detection Chain Summary](#-detection-chain-summary)
-5. [Lessons Learned](#-lessons-learned)
-
+4. [Detection Chain Summary](#detection-chain-summary)
+5. [Lessons Learned](#lessons-learned)
 ---
+
 
 ## Lab Overview
 
@@ -363,13 +363,3 @@ Anon SMB leak → cracked hash (j0hn) → LDAP spray → John Willium creds
    → ESC1 template abuse → Administrator certificate
    → Pass-the-Hash → Domain Admin
 ```
-
----
-
-## Lessons Learned
-
-- **Anonymous SMB shares are still a real initial-access vector** — a single readable share leaked enough employee metadata to seed a working wordlist.
-- **The Recycle Bin is a legitimate attack surface.** `WRITE`/`CREATE_CHILD` on `CN=Deleted Objects` is easy to overlook in ACL reviews but gave a full pivot path here.
-- **Fake-SPN Kerberoasting** shows that "no SPN" isn't a safe assumption if the attacker already has write rights on the object — `GenericAll`/`GenericWrite` on a user is effectively "can become roastable."
-- **ESC1 remains one of the highest-impact AD CS misconfigurations** — a single over-permissive template turned a low-privileged, WinRM-only user into Domain Admin in two commands.
-- **Wazuh + Sysmon/Windows Security auditing caught every stage except the final PtH/WinRM login** — a good candidate for a follow-up custom rule (e.g., alerting on WinRm/NTLM auth using a hash-only credential, or correlating Kerberos TGT issuance immediately followed by a new admin session).
