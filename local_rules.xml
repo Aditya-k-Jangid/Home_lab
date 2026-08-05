@@ -3,12 +3,8 @@
 <!-- Modify it at your will. -->
 <!-- Copyright (C) 2015, Wazuh Inc. -->
 
-<!-- Example -->
 <group name="local,syslog,sshd,">
 
-  <!--
-  Dec 10 01:02:02 host sshd[1234]: Failed none for root from 1.1.1.1 port 1066 ssh2
-  -->
   <rule id="100001" level="5">
     <if_sid>5716</if_sid>
     <srcip>1.1.1.1</srcip>
@@ -39,30 +35,30 @@
     <group>gdpr_IV_35.7.d,</group>
   </rule>
 
-<rule id="100021" level="12" frequency="20" timeframe="30">
-  <if_matched_sid>100020</if_matched_sid>
-  <same_field>win.eventdata.sourceAddress</same_field>
-  <description>Possible port scan detected: multiple connection attempts from $(win.eventdata.sourceAddress) in a short time</description>
-  <mitre>
-    <id>T1046</id>
-  </mitre>
-  <group>recon,</group>
-</rule>
+  <rule id="100021" level="12" frequency="20" timeframe="30">
+    <if_matched_sid>100020</if_matched_sid>
+    <same_field>win.eventdata.sourceAddress</same_field>
+    <description>Possible port scan detected: multiple connection attempts from $(win.eventdata.sourceAddress) in a short time</description>
+    <mitre>
+      <id>T1046</id>
+    </mitre>
+    <group>recon,</group>
+  </rule>
 
 </group>
 
 
 <group name="local,ad_lab,">
 
-<rule id="100030" level="8">
-  <if_sid>60103</if_sid>
-  <field name="win.system.eventID">^4624$</field>
-  <field name="win.eventdata.targetUserName" type="pcre2">ANONYMOUS LOGON</field>
-  <description>Anonymous/null session logon detected - possible enumeration</description>
-  <mitre><id>T1069</id></mitre>
-</rule>
+  <rule id="100030" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4624$</field>
+    <field name="win.eventdata.targetUserName" type="pcre2">ANONYMOUS LOGON</field>
+    <description>Anonymous/null session logon detected - possible enumeration</description>
+    <mitre><id>T1069</id></mitre>
+  </rule>
 
-<!-- 3a. Base rule: failed logon -->
+  <!-- 3a. Base rule: failed logon -->
   <rule id="100039" level="5">
     <if_sid>60103</if_sid>
     <field name="win.system.eventID">^4625$</field>
@@ -76,6 +72,7 @@
     <description>Possible brute force attack: multiple failed logons from same source</description>
     <mitre><id>T1110</id></mitre>
   </rule>
+
   <!-- 4. User added to privileged group (Administrators, Domain Admins, etc) -->
   <rule id="100033" level="12">
     <if_sid>60103</if_sid>
@@ -103,12 +100,12 @@
   </rule>
 
   <!-- 7. Kerberoasting: TGS request with weak encryption -->
-  <rule id="100036" level="12">
-    <if_sid>60103</if_sid>
-    <field name="win.system.eventID">^4769$</field>
-    <field name="win.eventdata.TicketOptions" type="pcre2">0x40810000</field>
-    <field name="win.eventdata.TicketEncryptionType" type="pcre2">0x17</field>
-    <description>Possible Kerberoasting attack</description>
+  <rule id="100036" level="8">
+    <if_sid>60106</if_sid>
+    <field name="win.eventdata.ticketOptions" type="pcre2">^0x40810000$|^0x40810010$</field>
+    <field name="win.eventdata.ticketEncryptionType">^0x17$</field>
+    <field name="win.eventdata.serviceName" type="pcre2">^(?!krbtgt$|.*\$).+$</field>
+    <description>Possible RC4 Kerberoasting: TGS requested for $(win.eventdata.serviceName) by $(win.eventdata.targetUserName)</description>
     <mitre><id>T1558.003</id></mitre>
   </rule>
 
@@ -141,6 +138,84 @@
     <field name="win.eventdata.targetImage" type="pcre2">lsass\.exe</field>
     <description>Possible credential dumping: process accessed LSASS memory ($(win.eventdata.sourceImage))</description>
     <mitre><id>T1003.001</id></mitre>
+  </rule>
+
+</group>
+
+<group name="local,ad_lab,">
+
+  <!-- 10. AD Account modified (Event ID 4738 baseline) -->
+  <rule id="100041" level="8">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4738$</field>
+    <description>AD account modified: target $(win.eventdata.targetUserName) modified by $(win.eventdata.subjectUserName)</description>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+
+  <!-- 11. AD Account restored/enabled (UAC changed to Account Enabled) -->
+  <rule id="100042" level="10">
+    <if_sid>100041</if_sid>
+    <field name="win.eventdata.userAccountControl" type="pcre2">(?i)Account Enabled</field>
+    <description>AD account restored/enabled: $(win.eventdata.targetUserName) re-enabled by $(win.eventdata.subjectUserName)</description>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+
+  <!-- 12. AD object undeleted/restored (Event ID 5138) -->
+  <rule id="100043" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^5138$</field>
+    <description>AD object restored (undeleted): check object rename from Deleted Objects to active OU/container</description>
+    <group>account_changed,ad_lab,</group>
+    <mitre><id>T1098</id></mitre>
+  </rule>
+
+  <!-- 13. SPN set/added to a user account (Kerberoasting setup via 4738 change) -->
+  <rule id="100044" level="12">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^5136$</field>
+    <field name="win.eventdata.attributeLDAPDisplayName">^servicePrincipalName$</field>
+    <description>SPN modified on $(win.eventdata.objectDN) by $(win.eventdata.subjectUserName) - possible Kerberoasting setup</description>
+    <group>account_changed,ad_lab,kerberoasting,</group>
+    <mitre><id>T1558.003</id></mitre>
+  </rule>
+
+  <!-- 14. TGS Request Captured (Unfiltered - Alert Level 8) -->
+  <rule id="100045" level="8">
+    <if_sid>60106</if_sid>
+    <field name="win.system.eventID">^4769$</field>
+    <description>A TGS service ticket was requested for service $(win.eventdata.serviceName) by user $(win.eventdata.targetUserName)</description>
+    <group>account_changed,ad_lab,kerberoasting,</group>
+    <mitre><id>T1558.003</id></mitre>
+  </rule>
+
+  <!-- 15. ESC1 - Certificate issued with a user-supplied UPN/SAN -->
+  <rule id="100046" level="14">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4887$</field>
+    <field name="win.eventdata.attributes" type="pcre2">(?i)SAN:upn=</field>
+    <description>ESC1 suspected: certificate issued to $(win.eventdata.requester) with requested SAN $(win.eventdata.attributes)</description>
+    <group>account_changed,ad_lab,adcs,esc1,</group>
+    <mitre><id>T1649</id></mitre>
+  </rule>
+
+  <!-- 16. AD CS certificate request with a user-supplied UPN/SAN -->
+  <rule id="100047" level="10">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4886$</field>
+    <field name="win.eventdata.attributes" type="pcre2">(?i)SAN:upn=</field>
+    <description>AD CS certificate request contains requested SAN: requester $(win.eventdata.requester), $(win.eventdata.attributes)</description>
+    <group>account_changed,ad_lab,adcs,certificate_request,</group>
+    <mitre><id>T1649</id></mitre>
+  </rule>
+
+  <!-- 17. PKINIT Kerberos Pre-Authentication via Certificate (Event ID 4768) -->
+  <rule id="100048" level="10">
+    <if_sid>60103</if_sid>
+    <field name="win.system.eventID">^4768$</field>
+    <field name="win.eventdata.preAuthType">^16$</field>
+    <description>PKINIT Kerberos authentication detected: User $(win.eventdata.targetUserName) authenticated using certificate from IP $(win.eventdata.ipAddress)</description>
+    <group>account_changed,ad_lab,pkinit,cert_auth,</group>
+    <mitre><id>T1558.003</id></mitre>
   </rule>
 
 </group>
