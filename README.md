@@ -79,10 +79,25 @@ then view all the logs captured :
 To get more info about a perticular packet just click it and view the details: (like the source ip 192.168.29.245 and others info)
 
 
-3. now after getting the password of 'John Willium' : John2134! who has genericwrite over Orange lets abuse this ACL and capture the logs , 
+3. now after getting the password of 'John Willium' : j0hn who has genericwrite over mango , Orange lets abuse it and captue logs , 
 
 <img width="443" height="560" alt="Screenshot 2026-07-30 175402" src="https://github.com/user-attachments/assets/8aa2080f-9826-45f7-a075-b09594f2e737" />
 
 
-3. 
+4. before anything the user orange is Deleted lets restore it 1st :
+
+```
+ bloodyAD -u 'John Willium' -p 'j0hn' -d xyz.com --host DC01.xyz.com --dc-ip 192.168.29.244 set restore Orange
+[+] Orange has been restored successfully under CN=Orange,CN=Users,DC=xyz,DC=com
+```
+
+<img width="2530" height="1249" alt="image" src="https://github.com/user-attachments/assets/b57dfbc9-fe2e-4ad0-9ab6-60b663cf6c1f" />
+
+the event got captured , lets view the details :
+
+<img width="1231" height="1147" alt="image" src="https://github.com/user-attachments/assets/e0e4aa24-77b2-4b4a-86fb-d9aa20aebed7" />
+
+as we can see the Targeted user is Orange , the and the User who performed action was John Willium , the ip is 192.168.29.244 which is my attacker machine 
+
+
 
